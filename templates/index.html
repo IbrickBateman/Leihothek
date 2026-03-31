@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Locker AI</title>
+</head>
+<body>
+    <h1>🔐 Locker AI Systeem</h1>
+
+    <form action="/check" method="post">
+        <button type="submit">Check locker</button>
+    </form>
+
+    {% if status %}
+        <h2>Status: {{ status }}</h2>
+        <img src="/static/output/test.jpg" width="300">
+    {% endif %}
+</body>
+</html>
