@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+
+# virtual environment
+venv/
+
+# AI model
+*.pt
+
+# output images
+static/output/
+
+# logs
+log.txt
