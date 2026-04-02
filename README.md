@@ -27,3 +27,20 @@ Een webapplicatie gebouwd met **Python (Flask)** en **YOLOv8** om lockers automa
 ---
 
 ## 🗂️ Project structuur
+
+ai_camera/
+│
+├── app/
+│ ├── routes.py
+│ ├── services/
+│ │ ├── detection.py
+│ │ └── locker.py
+│ └── templates/
+│
+├── static/
+│ ├── css/
+│ ├── input/
+│ └── output/
+│
+├── run.py
+└── README.md
