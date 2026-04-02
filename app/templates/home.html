@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="home-container">
+    <h2>Welkom "Naam / Admin voor nu"</h2>
+    <p>Welkom bij uw Locker dashboard.</p>
+
+    <a href="{{ url_for('main.check') }}" class="btn">
+        Ga naar lockers
+    </a>
+</div>
+
+{% endblock %}

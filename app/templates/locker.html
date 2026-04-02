@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<meta http-equiv="refresh" content="5">
+
+<div style="text-align: center;">
+
+    <h2>{{ name }}</h2>
+
+    <p class="{{ 'ok' if data.status == 'OK' else 'fout' }}">
+        Status: {{ data.status }}
+    </p>
+
+    <img class="detail-img"
+         src="{{ url_for('static', filename='output/' + data.image) }}">
+
+    <br><br>
+
+    <a href="{{ url_for('main.check') }}" class="btn">Terug</a>
+
+</div>
+
+{% endblock %}

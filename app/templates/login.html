@@ -1,0 +1,17 @@
+{% extends "auth_base.html" %}
+
+{% block content %}
+
+<div class="login-wrapper">
+    <div class="login-card">
+        <h2>Admin Login</h2>
+
+        <form method="POST" class="login-form">
+            <input type="text" name="username" placeholder="Gebruiker" required>
+            <input type="password" name="password" placeholder="Wachtwoord" required>
+            <button class="btn">Login</button>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
