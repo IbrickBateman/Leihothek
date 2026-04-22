@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+
+
+
+<div class="stats">
+    <div class="stat-card">
+        <h3>{{ total }}</h3>
+        <p>Totaal lockers</p>
+    </div>
+
+    <div class="stat-card">
+        <h3>{{ available }}</h3>
+        <p>Beschikbaar</p>
+    </div>
+
+    
+
+    <div class="stat-card">
+        <h3>{{ rented }}</h3>
+        <p>Verhuurd</p>
+    </div>
+</div>
+
+
+
+<h2>Locker overzicht</h2>
+
+<div class="locker-grid">
+
+{% for locker in lockers %}
+
+<div class="card">
+    <h3>{{ locker.name }}</h3>
+
+    {% if locker.status == "available" %}
+        <span class="badge ok">Beschikbaar</span>
+        <a href="/rent/{{ locker.name }}" class="btn">Huur</a>
+    {% else %}
+        <span class="badge error">Verhuurd</span>
+        <p class="locker-user">Gebruiker: {{ locker.user }}</p>
+
+        {% if locker.rented_at %}
+        <p class="locker-time">Sinds: {{ locker.rented_at }}</p>
+        {% endif %}
+
+
+
+        <a href="/free/{{ locker.name }}" class="btn">Vrijgeven</a>
+
+    {% endif %}
+</div>
+
+{% endfor %}
+
+</div>
+
+
+{% endblock %}S

@@ -2,7 +2,6 @@
 
 {% block content %}
 
-
 <div class="container">
     {% if lockers %}
         {% for name, data in lockers.items() %}
@@ -18,10 +17,17 @@
 
                     <img src="{{ url_for('static', filename='output/' + data.image) }}">
 
+                    <p>Detecties: {{ data.detections }}</p>
+
+                    
+
+
+
                 </div>
             </a>
 
         {% endfor %}
     {% endif %}
 </div>
+
 {% endblock %}

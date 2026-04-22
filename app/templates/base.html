@@ -8,14 +8,18 @@
     
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
 
-    
+        
     
 </head>
 
 <body>
 
     <header class="navbar">
+
+
     <div class="nav-inner">
+        
+    <a href="{{ url_for('main.logout') }}" class="btn">Logout</a>
 
         <h1>Locker Camera Dashboard</h1>
 
@@ -28,8 +32,10 @@
     {% if request.path != "/check" %}
         <a href="{{ url_for('main.check') }}" class="btn">Check lockers</a>
     {% endif %}
+    
+    <a href="{{ url_for('main.rentals') }}" class="btn">Locker overzicht</a>
 
-    <a href="{{ url_for('main.logout') }}" class="btn">Logout</a>
+
 
 </div>
 
