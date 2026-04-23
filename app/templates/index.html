@@ -17,7 +17,16 @@
 
                     <img src="{{ url_for('static', filename='output/' + data.image) }}">
 
-                    <p>Detecties: {{ data.detections }}</p>
+                    {% if data.detections %}
+                        <p>Detecties:</p>
+                        <ul>
+                            {% for item in data.detections %}
+                                <li>{{ item }}</li>
+                            {% endfor %}
+                    </ul>
+                {% else %}
+                        <p>Geen objecten gedetecteerd</p>
+                {% endif %}
 
                     
 

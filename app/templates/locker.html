@@ -4,21 +4,35 @@
 
 <meta http-equiv="refresh" content="5">
 
-<div class="locker-grid">
 
-    <h2>{{ name }}</h2>
+<div class="locker-page">
 
-    <p class="{{ 'ok' if data.status == 'OK' else 'fout' }}">
-        Status: {{ data.status }}
-    </p>
+    <div class="locker-card">
 
-    <img class="detail-img"
-         src="{{ url_for('static', filename='output/' + data.image) }}">
+    <div class="locker-inner">
 
-    <br><br>
+        <div class="locker-header">
+            <h2>{{ name }}</h2>
 
-    <a href="{{ url_for('main.check') }}" class="btn">Terug</a>
+            <div class="status-badge {{ 'ok' if data.status == 'OK' else 'fout' }}">
+                Status: {{ data.status }}
+            </div>
+        </div>
+
+        <div class="image-wrapper">
+            <img 
+                class="detail-img"
+                src="{{ url_for('static', filename='output/' + data.image) }}">
+        </div>
+
+        <a href="{{ url_for('main.check') }}" class="btn btn-full">
+            Terug
+        </a>
+
+    </div>
 
 </div>
+
+
 
 {% endblock %}

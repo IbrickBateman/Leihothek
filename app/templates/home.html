@@ -3,12 +3,17 @@
 {% block content %}
 
 <div class="home-container">
-    <h2>Welkom "Naam / Admin voor nu"</h2>
-    <p>Welkom bij uw Locker dashboard.</p>
+    
+    <div class="home-card">
+        <h2>Welkom {{ username }}</h2>
+        <p>Welkom bij uw Locker dashboard.</p>
 
-    <a href="{{ url_for('main.check') }}" class="btn">
-        Ga naar lockers
-    </a>
+        <div class="home-buttons">
+            <a href="/rentals" class="btn">Ga naar lockers</a>
+            <a href="/check" class="btn">Ga naar scan systeem</a>
+        </div>
+    </div>
+
 </div>
 
 {% endblock %}

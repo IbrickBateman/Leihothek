@@ -2,9 +2,21 @@
 
 {% block content %}
 
+<!-- 🔔 ADMIN ALERTS -->
+{% if alerts %}
+<div class="alerts-section">
+    <h3>⚠️ Meldingen</h3>
+    {% for alert in alerts %}
+    <div class="alert-item">
+        <span>{{ alert.message }}</span>
+        <span class="alert-time">{{ alert.timestamp }}</span>
+        <a href="/unblock/{{ alert.locker }}" class="btn btn-unblock">Hersteld</a>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
 
-
-
+<!-- 📊 STATS -->
 <div class="stats">
     <div class="stat-card">
         <h3>{{ total }}</h3>
@@ -16,15 +28,18 @@
         <p>Beschikbaar</p>
     </div>
 
-    
-
     <div class="stat-card">
         <h3>{{ rented }}</h3>
         <p>Verhuurd</p>
     </div>
+
+    {% if blocked > 0 %}
+    <div class="stat-card stat-blocked">
+        <h3>{{ blocked }}</h3>
+        <p>Geblokkeerd</p>
+    </div>
+    {% endif %}
 </div>
-
-
 
 <h2>Locker overzicht</h2>
 
@@ -32,13 +47,58 @@
 
 {% for locker in lockers %}
 
-<div class="card">
+<div class="card {% if locker.blocked %}card-blocked{% endif %}">
     <h3>{{ locker.name }}</h3>
 
-    {% if locker.status == "available" %}
+    {% if locker.blocked %}
+        <!-- 🔴 BLOCKED -->
+        <span class="badge blocked">Geblokkeerd</span>
+        <p class="locker-info">Item kapot gemeld</p>
+        <p class="locker-info">Backup: {{ backup_locker }}</p>
+
+    {% elif locker.status == "available" %}
+        <!-- 🟢 AVAILABLE -->
         <span class="badge ok">Beschikbaar</span>
-        <a href="/rent/{{ locker.name }}" class="btn">Huur</a>
+
+        {% if locker.last_report %}
+            <!-- 📋 MET RAPPORT -->
+            <div class="condition-box
+                {% if locker.last_report.status == 'OK' %}condition-ok
+                {% elif locker.last_report.status == 'BROKEN' %}condition-broken
+                {% elif locker.last_report.status == 'MINOR' %}condition-minor
+                {% else %}condition-defect{% endif %}">
+                
+                <p class="condition-label">Laatste check:</p>
+
+                {% if locker.last_report.status == "OK" %}
+                    <p>Werkt goed</p>
+                {% elif locker.last_report.status == "BROKEN" %}
+                    <p>Kapot</p>
+                {% elif locker.last_report.status == "MINOR" %}
+                    <p>Kleine schade</p>
+                {% else %}
+                    <p>Probleem gemeld</p>
+                {% endif %}
+
+                {% if locker.last_report.comment %}
+                    <p class="condition-comment">"{{ locker.last_report.comment }}"</p>
+                {% endif %}
+
+                <p class="condition-meta">
+                    {{ locker.last_report.user }} · {{ locker.last_report.timestamp }}
+                </p>
+            </div>
+
+            <a href="/pickup/{{ locker.name }}" class="btn">Huur</a>
+
+        {% else %}
+            <!-- ❌ GEEN RAPPORT -->
+            <a href="/pickup/{{ locker.name }}" class="btn">Huur</a>
+            <p class="no-report">Nog geen rapport</p>
+        {% endif %}
+
     {% else %}
+        <!-- 🔵 RENTED -->
         <span class="badge error">Verhuurd</span>
         <p class="locker-user">Gebruiker: {{ locker.user }}</p>
 
@@ -46,16 +106,13 @@
         <p class="locker-time">Sinds: {{ locker.rented_at }}</p>
         {% endif %}
 
-
-
-        <a href="/free/{{ locker.name }}" class="btn">Vrijgeven</a>
-
+        <a href="/return/{{ locker.name }}" class="btn">Inleveren</a>
     {% endif %}
+
 </div>
 
 {% endfor %}
 
 </div>
 
-
-{% endblock %}S
+{% endblock %}

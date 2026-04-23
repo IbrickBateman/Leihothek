@@ -7,63 +7,62 @@ import os
 # ======================
 
 MODEL_PATH = "model/yolov8n.pt"
-CONF_THRESHOLD = 0.7
+CONF_THRESHOLD = 0.4   # 🔥 lager = beter detecteren
 
-# model 1x laden (belangrijk!)
 model = YOLO(MODEL_PATH)
 
-
 # ======================
-# FUNCTIE
+# IMAGE DETECTIE
 # ======================
 
-def detect_items(image_path):
-    print("Processing:", image_path)
+def detect_image(input_path, output_path):
+    img = cv2.imread(input_path)
 
-    img = cv2.imread(image_path)
-
-    # ❌ als image niet geladen kan worden
     if img is None:
-        print(f"❌ Kon niet laden: {image_path}")
-        return [], False
+        return []
 
-    # YOLO detectie
     results = model(img)
 
-    detected = False
+    detections = []
 
-    # check of er iets gedetecteerd is
     for r in results:
-        if r.boxes is not None and len(r.boxes) > 0:
-            for box in r.boxes:
-                conf = float(box.conf)
-                if conf > CONF_THRESHOLD:
-                    detected = True
+        if r.boxes is None:
+            continue
 
-    # ======================
-    # AFBEELDING OPSLAAN
-    # ======================
+        for box in r.boxes:
+            conf = float(box.conf[0])
+            cls_id = int(box.cls[0])
+            label = model.names[cls_id]
+
+            if conf > CONF_THRESHOLD:
+                if label not in detections:
+                    detections.append(label)
 
     annotated = results[0].plot()
 
-    BASE_DIR = os.path.dirname(
-        os.path.dirname(
-            os.path.dirname(os.path.abspath(__file__))
-        )
-    )
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    cv2.imwrite(output_path, annotated)
 
-    output_folder = os.path.join(BASE_DIR, "static", "output")
-    os.makedirs(output_folder, exist_ok=True)
+    return detections
 
-    output_path = os.path.join(output_folder, os.path.basename(image_path))
+# ======================
+# FRAME DETECTIE
+# ======================
 
-    success = cv2.imwrite(output_path, annotated)
+def detect_frame(frame):
+    results = model(frame)
 
-    print("Saved to:", output_path)
-    print("Saved success:", success)
+    detections = []
 
-    # ======================
-    # RETURN (ALTIJD ONDERAAN!)
-    # ======================
+    for r in results:
+        if r.boxes is None:
+            continue
 
-    return results, detected
+        for box in r.boxes:
+            conf = float(box.conf[0])
+            label = model.names[int(box.cls[0])]
+
+            if conf > CONF_THRESHOLD:
+                detections.append(label)
+
+    return detections

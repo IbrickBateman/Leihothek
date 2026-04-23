@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="content">
+    <h2>📊 Scan resultaat</h2>
+
+    <p>Status: <strong>{{ status }}</strong></p>
+
+    <p>Gedetecteerd:</p>
+    <ul>
+        {% for d in detections %}
+            <li>{{ d }}</li>
+        {% endfor %}
+    </ul>
+
+    <a href="/scan-page" class="btn">Nieuwe scan</a>
+</div>
+
+{% endblock %}

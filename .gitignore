@@ -12,3 +12,8 @@ static/output/
 
 # logs
 log.txt
+
+users.db
+__pycache__/
+*.pyc
+venv/

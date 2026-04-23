@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="return-container">
+
+    {% if step == "open" %}
+    <!-- STEP 1: Open the locker -->
+    <h2>{{ locker_name }}</h2>
+    <p style="color:#888; margin-top:8px; margin-bottom:30px;">Press the button below to open the locker.</p>
+
+    {% if last_report %}
+    <div class="condition-box {% if last_report.status == 'OK' %}condition-ok{% else %}condition-defect{% endif %}" style="margin-bottom:24px;">
+        <p class="condition-label">Last return condition:</p>
+        {% if last_report.status == "OK" %}
+            <p>Working fine</p>
+        {% else %}
+            <p>Had a problem</p>
+        {% endif %}
+        {% if last_report.comment %}
+            <p class="condition-comment">"{{ last_report.comment }}"</p>
+        {% endif %}
+        <p class="condition-meta">by {{ last_report.user }} · {{ last_report.timestamp }}</p>
+    </div>
+    {% else %}
+    <div class="condition-box condition-ok" style="margin-bottom:24px;">
+        <p style="color:#888; font-size:14px;">No previous condition report for this locker.</p>
+    </div>
+    {% endif %}
+
+    <a href="/pickup/{{ locker_name }}?step=confirm" class="btn" style="width:100%; text-align:center; font-size:16px; padding:14px; display:block;">
+        Open locker
+    </a>
+
+    {% elif step == "confirm" %}
+    <!-- STEP 2: Confirm item condition -->
+    <h2>Werkt het item?</h2>
+<p style="color:#888; margin-top:8px; margin-bottom:30px;">
+Controleer het item voordat je het huurt.
+</p>
+    <div style="display:flex; flex-direction:column; gap:14px;">
+
+        <form action="/pickup/{{ locker_name }}/ok" method="POST">
+            <button type="submit" class="btn condition-btn condition-btn-ok">
+                Item is working fine
+            </button>
+        </form>
+
+        <form action="/pickup/{{ locker_name }}/broken" method="POST">
+            <button type="submit" class="btn condition-btn condition-btn-broken">
+                Item is not working
+            </button>
+        </form>
+
+    </div>
+
+    {% endif %}
+
+    <a href="/rentals" style="display:block; text-align:center; margin-top:20px; color:#aaa; font-size:13px;">
+        Back to overview
+    </a>
+
+</div>
+
+<style>
+.return-container { max-width: 520px; margin: 0 auto; }
+
+.condition-box { padding: 14px 16px; border-radius: 10px; font-size: 14px; }
+.condition-ok { background-color: #f0fbed; border: 1.5px solid #b6e0a8; }
+.condition-defect { background-color: #fff4ec; border: 1.5px solid #f4c09a; }
+.condition-label { font-weight: 600; font-size: 12px; color: #888; margin-bottom: 4px !important; }
+.condition-comment { font-style: italic; color: #555; margin-top: 4px !important; }
+.condition-meta { font-size: 12px; color: #aaa; margin-top: 6px !important; }
+
+.condition-btn {
+    width: 100%;
+    font-size: 16px;
+    padding: 18px;
+    border-radius: 12px;
+    text-align: center;
+}
+.condition-btn-ok {
+    background-color: #6bbf59;
+}
+.condition-btn-ok:hover { background-color: #5aa94b; }
+.condition-btn-broken {
+    background-color: #e07b3a;
+}
+.condition-btn-broken:hover { background-color: #c4621f; }
+</style>
+
+{% endblock %}

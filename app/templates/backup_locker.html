@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="return-container">
+
+    <div class="alert-box">
+        <h2>{{ broken_locker }} is out of service</h2>
+        <p>The item in this locker has been reported as broken. It has been blocked and the admin has been notified.</p>
+    </div>
+
+    <div class="backup-box">
+    <h3>Spare item available!</h3>
+    <p>You can pick up a replacement item from:</p>
+    <div class="backup-locker-name">{{ backup_locker }}</div>
+
+    <a href="/pickup/{{ backup_locker }}" class="btn btn-full">
+        Go to {{ backup_locker }} →
+    </a>
+</div>
+
+<a href="/rentals" class="btn" style="background:#aaa; width:100%; text-align:center; margin-top:12px; padding:12px;">
+    Back to overview
+</a>
+
+</div>
+
+
+{% endblock %}
