@@ -1,0 +1,236 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="return-container">
+
+    <h2>Return {{ locker_name }}</h2>
+    <p style="color: #888; margin-top: 8px; margin-bottom: 30px;">How was the condition of the item when you return it?</p>
+
+    <form action="/return/{{ locker_name }}" method="POST" enctype="multipart/form-data" class="return-form" id="returnForm">
+
+        <!-- Status -->
+        <div class="form-section">
+            <label class="form-label">Item condition</label>
+            <div class="radio-group">
+                <label class="radio-option" onclick="showSubOptions(false)">
+                    <input type="radio" name="status" value="OK" checked>
+                    <span class="radio-box ok-box">Working fine</span>
+                </label>
+                <label class="radio-option" onclick="showSubOptions(true)">
+                    <input type="radio" name="status" value="DEFECT">
+                    <span class="radio-box defect-box">Has a problem</span>
+                </label>
+            </div>
+        </div>
+
+        <!-- Sub-options (only shown when "Has a problem" is selected) -->
+        <div class="form-section" id="problemTypeSection" style="display:none;">
+            <label class="form-label">What kind of problem?</label>
+            <div style="display:flex; flex-direction:column; gap:10px;">
+
+                <label class="radio-option-full">
+                    <input type="radio" name="problem_type" value="MINOR">
+                    <span class="radio-box-full minor-box">
+                        <strong>Minor issue</strong>
+                        <span>Scratch, dent or cosmetic damage — item still works</span>
+                    </span>
+                </label>
+
+                <label class="radio-option-full">
+                    <input type="radio" name="problem_type" value="BROKEN">
+                    <span class="radio-box-full broken-box">
+                        <strong>Item is broken</strong>
+                        <span>Not working or cannot be used</span>
+                    </span>
+                </label>
+
+            </div>
+        </div>
+
+        <!-- Comment -->
+        <div class="form-section">
+            <label class="form-label" for="comment">Comment <span id="commentRequired" style="color:#aaa">(optional)</span></label>
+            <textarea id="comment" name="comment" placeholder="Describe the condition of the item..." class="form-textarea"></textarea>
+        </div>
+
+        <!-- Photo -->
+        <div class="form-section">
+            <label class="form-label">Photo <span style="color:#e07b3a">* required</span></label>
+
+            <div id="webcamSection">
+                <video id="video" autoplay playsinline class="webcam-preview" style="display:none;"></video>
+                <canvas id="canvas" style="display:none;"></canvas>
+
+                <div id="photoPreview" style="display:none;">
+                    <img id="previewImg" class="webcam-preview" alt="Captured photo">
+                    <button type="button" class="btn btn-retake" onclick="retakePhoto()">Retake</button>
+                </div>
+
+                <div id="cameraButtons">
+                    <button type="button" class="btn btn-camera" onclick="startCamera()">Open camera</button>
+                </div>
+
+                <div id="captureButton" style="display:none;">
+                    <button type="button" class="btn btn-snap" onclick="takePhoto()">Take photo</button>
+                </div>
+            </div>
+
+            <input type="file" name="photo" id="photoFile" accept="image/*" capture="camera" style="display:none;">
+            <input type="hidden" name="photo_data" id="photoData">
+
+            <p style="font-size: 13px; color: #aaa; margin-top: 8px;">On mobile, the camera opens automatically.</p>
+        </div>
+
+        <button type="submit" class="btn" style="width:100%; margin-top:10px; font-size:16px; padding:14px;" onclick="return validateForm()">
+            Return item
+        </button>
+
+    </form>
+</div>
+
+<style>
+.return-container { max-width: 520px; margin: 0 auto; }
+.return-form { background: white; border-radius: 14px; padding: 30px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+.form-section { margin-bottom: 24px; }
+.form-label { display: block; font-weight: 500; margin-bottom: 10px; font-size: 15px; }
+.radio-group { display: flex; gap: 12px; }
+.radio-option { flex: 1; cursor: pointer; }
+.radio-option input[type="radio"] { display: none; }
+.radio-box { display: block; padding: 14px; border-radius: 10px; border: 2px solid #e0e0e0; text-align: center; font-weight: 500; font-size: 15px; transition: 0.2s; }
+.radio-option input[type="radio"]:checked + .ok-box { border-color: #6bbf59; background-color: #f0fbed; color: #3a8a2a; }
+.radio-option input[type="radio"]:checked + .defect-box { border-color: #e07b3a; background-color: #fff4ec; color: #b05a1a; }
+.radio-box:hover { border-color: #aaa; }
+
+/* Sub-option styles */
+.radio-option-full { display: block; cursor: pointer; }
+.radio-option-full input[type="radio"] { display: none; }
+.radio-box-full {
+    display: flex;
+    flex-direction: column;
+    padding: 14px 16px;
+    border-radius: 10px;
+    border: 2px solid #e0e0e0;
+    transition: 0.2s;
+    gap: 4px;
+}
+.radio-box-full strong { font-size: 14px; }
+.radio-box-full span { font-size: 13px; color: #888; }
+.radio-option-full input[type="radio"]:checked + .minor-box {
+    border-color: #e0a83a;
+    background-color: #fffbec;
+    color: #b07a1a;
+}
+.radio-option-full input[type="radio"]:checked + .minor-box span { color: #b07a1a; }
+.radio-option-full input[type="radio"]:checked + .broken-box {
+    border-color: #c0392b;
+    background-color: #fdf0f0;
+    color: #922b21;
+}
+.radio-option-full input[type="radio"]:checked + .broken-box span { color: #922b21; }
+.radio-box-full:hover { border-color: #aaa; }
+
+.form-textarea { width: 100%; min-height: 90px; border-radius: 10px; border: 1.5px solid #ddd; padding: 12px; font-family: 'Poppins', sans-serif; font-size: 14px; resize: vertical; box-sizing: border-box; }
+.form-textarea:focus { outline: none; border-color: #6bbf59; }
+.webcam-preview { width: 100%; border-radius: 10px; margin-bottom: 10px; }
+.btn-camera { background-color: #4a90d9; width: 100%; text-align: center; }
+.btn-camera:hover { background-color: #357abd; }
+.btn-snap { background-color: #6bbf59; width: 100%; text-align: center; }
+.btn-snap:hover { background-color: #5aa94b; }
+.btn-retake { background-color: #aaa; font-size: 13px; padding: 8px 14px; margin-bottom: 10px; }
+.btn-retake:hover { background-color: #888; }
+</style>
+
+<script>
+let stream = null;
+let photoTaken = false;
+const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+if (isMobile) {
+    document.getElementById('webcamSection').style.display = 'none';
+    document.getElementById('photoFile').style.display = 'block';
+}
+
+function showSubOptions(show) {
+    const section = document.getElementById('problemTypeSection');
+    section.style.display = show ? 'block' : 'none';
+    if (!show) {
+        document.querySelectorAll('input[name="problem_type"]').forEach(r => r.checked = false);
+    }
+    const label = document.getElementById('commentRequired');
+    label.textContent = show ? '* required' : '(optional)';
+    label.style.color = show ? '#e07b3a' : '#aaa';
+}
+
+function startCamera() {
+    document.getElementById('cameraButtons').style.display = 'none';
+    navigator.mediaDevices.getUserMedia({ video: true })
+        .then(function(s) {
+            stream = s;
+            const video = document.getElementById('video');
+            video.srcObject = stream;
+            video.style.display = 'block';
+            document.getElementById('captureButton').style.display = 'block';
+        })
+        .catch(function() {
+            document.getElementById('webcamSection').style.display = 'none';
+            document.getElementById('photoFile').style.display = 'block';
+        });
+}
+
+function takePhoto() {
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext('2d').drawImage(video, 0, 0);
+    const dataURL = canvas.toDataURL('image/jpeg');
+    document.getElementById('photoData').value = dataURL;
+    document.getElementById('previewImg').src = dataURL;
+    document.getElementById('photoPreview').style.display = 'block';
+    video.style.display = 'none';
+    document.getElementById('captureButton').style.display = 'none';
+    if (stream) stream.getTracks().forEach(t => t.stop());
+    photoTaken = true;
+}
+
+function retakePhoto() {
+    photoTaken = false;
+    document.getElementById('photoPreview').style.display = 'none';
+    document.getElementById('photoData').value = '';
+    document.getElementById('cameraButtons').style.display = 'block';
+}
+
+function validateForm() {
+    const status = document.querySelector('input[name="status"]:checked').value;
+
+    if (status === 'DEFECT') {
+        const problemType = document.querySelector('input[name="problem_type"]:checked');
+        if (!problemType) {
+            alert('Please select the type of problem.');
+            return false;
+        }
+        const comment = document.getElementById('comment').value.trim();
+        if (!comment) {
+            alert('Please describe the problem in the comment field.');
+            return false;
+        }
+    }
+
+    if (isMobile) {
+        const fileInput = document.getElementById('photoFile');
+        if (!fileInput.files || fileInput.files.length === 0) {
+            alert('Please take a photo before returning the item.');
+            return false;
+        }
+        return true;
+    }
+    if (!photoTaken) {
+        alert('Please take a photo before returning the item.');
+        return false;
+    }
+    return true;
+}
+</script>
+
+{% endblock %}

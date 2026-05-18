@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container">
+    {% if lockers %}
+        {% for name, data in lockers.items() %}
+
+            <a href="/locker/{{ name }}" class="card-link">
+                <div class="card">
+
+                    <h2>{{ name }}</h2>
+
+                    <p class="{{ 'ok' if data.status == 'OK' else 'fout' }}">
+                        Status: {{ data.status }}
+                    </p>
+
+                    <img src="{{ url_for('static', filename='output/' + data.image) }}">
+
+                    {% if data.detections %}
+                        <p>Detecties:</p>
+                        <ul>
+                            {% for item in data.detections %}
+                                <li>{{ item }}</li>
+                            {% endfor %}
+                    </ul>
+                {% else %}
+                        <p>Geen objecten gedetecteerd</p>
+                {% endif %}
+
+                    
+
+
+
+                </div>
+            </a>
+
+        {% endfor %}
+    {% endif %}
+</div>
+
+{% endblock %}

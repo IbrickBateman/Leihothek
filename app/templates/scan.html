@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="content">
+
+    <div class="scan-card">
+        <h2>Scan systeem</h2>
+
+        <p>Camera wordt gebruikt om producten te controleren</p>
+
+        <div class="scan-image">
+            <img src="{{ url_for('main.video_feed') }}">
+        </div>
+
+        <form method="POST" action="/scan">
+            <button class="btn">Scan uitvoeren</button>
+        </form>
+    </div>
+
+</div>
+
+{% endblock %}

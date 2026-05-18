@@ -1,0 +1,58 @@
+{% extends "auth_base.html" %}
+
+{% block content %}
+
+
+
+<section class="auth-bg">
+
+  <div class="wave">
+    <span></span>
+    <span></span>
+    <span></span>
+  </div>
+
+
+<div class="login-wrapper">
+    <div class="login-card">
+        <h2>Login</h2>
+<p class="subtitle">Log in om verder te gaan</p>
+        <form method="POST" class="login-form">
+            <input type="text" name="username" placeholder="Gebruiker" required>
+
+
+            <div class="password-wrapper">
+    <input type="password" name="password" placeholder="Wachtwoord" required id="password">
+    <span class="toggle-password" onclick="togglePassword()">👁</span>
+            </div>
+
+
+            <button class="btn">Login</button>   
+
+        </form>
+
+<p class="auth-link">
+    Nog geen account? <a href="/register">Registreer hier</a>
+</p>
+
+{% if error %}
+    <p style="color:red;">{{ error }}</p>
+    
+{% endif %}
+
+
+    </div>
+</div>
+
+
+</section>
+
+
+<script>
+function togglePassword() {
+    const input = document.getElementById("password");
+    input.type = input.type === "password" ? "text" : "password";
+}
+</script>
+
+{% endblock %}

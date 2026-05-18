@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Locker Camera AI</title>
+
+    <!-- CSS koppelen -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+        
+    
+</head>
+
+<body>
+
+
+<div class="bg"></div>
+<div class="bg bg2"></div>
+<div class="bg bg3"></div>
+
+    <header class="navbar">
+
+
+    <div class="nav-inner">
+        
+    <a href="{{ url_for('main.logout') }}" class="btn">Logout</a>
+
+        <h1>Locker Camera Dashboard</h1>
+
+        <div class="nav-actions">
+
+    {% if request.path != "/" %}
+        <a href="{{ url_for('main.home') }}" class="btn">Home</a>
+    {% endif %}
+
+    {% if request.path != "/check" %}
+        <a href="{{ url_for('main.check') }}" class="btn">Check lockers</a>
+    {% endif %}
+    
+    <a href="{{ url_for('main.rentals') }}" class="btn">Locker overzicht</a>
+
+        <a href="{{ url_for('main.scan_page') }}" class="btn">Scan</a>
+        
+
+</div>
+
+    </div>
+</header>
+
+    <main class="content">
+        {% block content %}{% endblock %}
+    </main>
+
+</body>
+</html>
