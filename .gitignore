@@ -1,19 +1,22 @@
+# Python cache
 __pycache__/
 *.pyc
 
-# virtual environment
+# Virtual environment
 venv/
 
 # AI model
 *.pt
 
-# output images
+# Output images
 static/output/
 
-# logs
+# Logs
 log.txt
 
+# Database
 users.db
-__pycache__/
-*.pyc
-venv/
+
+.env
+
+.DS_Store

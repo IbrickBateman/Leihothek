@@ -11,11 +11,10 @@ from .services.locker import get_locker_status
 
 main = Blueprint("main", __name__)
 
-# ------------------ CAMERA ------------------
+# ------------------ CAMERA, alle camera ip even hieronder zetten later ------------------
 
 CAMERA_SOURCES = [
-    "http://192.168.178.50:8080/video",
-    "http://192.168.1.10:8080/video",
+    "http://192.168.25.27:8080/video",
     0
 ]
 
@@ -130,7 +129,7 @@ def scan():
     if not frames:
         return "Geen beeld"
 
-    # 🔥 combineer detections van meerdere frames
+    
     all_detections = []
 
     for frame in frames:
