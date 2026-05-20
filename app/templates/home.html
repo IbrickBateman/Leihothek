@@ -10,8 +10,10 @@
 
         <div class="home-buttons">
             <a href="/rentals" class="btn">Ga naar lockers</a>
-            <a href="/scan-page" class="btn">Ga naar scan systeem</a>
-            <a href="/rfid" class="btn">RFID systeem</a>
+            <a href="/return-rfid" class="btn">Item inleveren</a>
+            {% if is_admin %}
+            <a href="/rfid" class="btn">RFID beheer</a>
+            {% endif %}
         </div>
     </div>
 
