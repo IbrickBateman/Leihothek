@@ -4,39 +4,31 @@
 
 <div class="rfid-wrap">
 
-    <h2>RFID Cabinet Management</h2>
-    <p class="rfid-subtitle">Real-time cabinet control via Pico W</p>
+    <h2>RFID beheer (admin)</h2>
+    <p class="rfid-subtitle">Voeg items toe en koppel ze aan een RFID-kaart. Elk item is z'n eigen locker.</p>
 
-    <!-- Pico IP ayar kismi -->
+    <!-- Pico IP ayar -->
     <div class="rfid-section-label">Pico IP adres</div>
     <div class="rfid-ip-form">
         <input type="text" id="inp-ip" value="{{ pico_ip }}" placeholder="192.168.1.xx">
-        <button class="btn" onclick="saveIP()">Connect</button>
+        <button class="btn" onclick="saveIP()">Opslaan & test</button>
     </div>
-
     <div class="rfid-status-bar">
         <div class="rfid-status-dot" id="status-dot"></div>
         <span id="status-text">Niet verbonden</span>
     </div>
 
-    <!-- Notification kutusu (kart okununca aci­lan/hata) -->
-    <div class="rfid-notification" id="notification">
-        <div class="rfid-notif-title" id="notif-title"></div>
-        <div id="notif-body"></div>
-        <a id="notif-link" href="#" class="btn" style="margin-top:12px; display:none;">Ga naar pickup →</a>
-    </div>
-
-    <!-- Kayitli itemler -->
+    <!-- Kayıtlı itemler -->
     <div class="rfid-section-label">Geregistreerde items</div>
     <div class="rfid-card">
         <div id="item-list">
             {% if items %}
                 {% for it in items %}
                 <div class="rfid-item-row">
-                    <div class="rfid-cabinet-badge">{{ it.locker_name.split()[-1] }}</div>
+                    <div class="rfid-cabinet-badge">📦</div>
                     <div class="rfid-item-info">
                         <div class="rfid-item-name">{{ it.name }}</div>
-                        <div class="rfid-item-meta">{{ it.locker_name }} · <span class="rfid-mono">{{ it.rfid }}</span></div>
+                        <div class="rfid-item-meta"><span class="rfid-mono">{{ it.rfid }}</span></div>
                     </div>
                     <button class="rfid-delete-btn" onclick="deleteItem({{ it.id }})">Verwijder</button>
                 </div>
@@ -47,52 +39,65 @@
         </div>
     </div>
 
-    <!-- Yeni item ekleme -->
+    <!-- Yeni item ekle -->
     <div class="rfid-section-label">Nieuw item toevoegen</div>
     <div class="rfid-card">
         <div class="rfid-add-form">
             <div class="rfid-fg">
-                <label>Itemnaam</label>
+                <label>Itemnaam (= locker naam)</label>
                 <input type="text" id="inp-name" placeholder="Boor, Ventilator...">
             </div>
             <div class="rfid-fg">
                 <label>RFID ID</label>
                 <input type="text" id="inp-rfid" placeholder="FB-41-7F-72">
             </div>
-            <div class="rfid-fg">
-                <label>Locker</label>
-                <select id="inp-locker">
-                    {% for ln in locker_names %}
-                    <option value="{{ ln }}">{{ ln }}</option>
-                    {% endfor %}
-                </select>
-            </div>
             <button class="btn" onclick="addItem()">Toevoegen</button>
         </div>
-        <p class="rfid-hint">Tip: scan een kaart en kopieer het RFID-nummer hieronder uit "Scan geschiedenis".</p>
+        <p class="rfid-hint">Tip: scan een kaart bij de lezer — het nummer verschijnt automatisch hierboven en in "Admin scan geschiedenis".</p>
     </div>
 
-    <!-- Scan history -->
-    <div class="rfid-section-label">Scan geschiedenis</div>
+    <!-- ADMIN scan history -->
+    <div class="rfid-section-label">Admin scan geschiedenis</div>
     <div class="rfid-card">
-        <div class="rfid-log" id="log">
-            {% if scans %}
-                {% for s in scans %}
+        <div class="rfid-log" id="admin-log">
+            {% if admin_scans %}
+                {% for s in admin_scans %}
                 <div class="rfid-log-row">
                     <span class="rfid-mono">{{ s.timestamp }}</span>
                     <span class="rfid-mono">{{ s.rfid }}</span>
                     →
                     {% if s.result == "OPEN" %}
-                        <span class="rfid-log-ok">{{ s.item_name }} ({{ s.locker_name }}) ✓</span>
-                    {% elif s.result == "BLOCKED" %}
-                        <span class="rfid-log-warn">{{ s.item_name }} ({{ s.locker_name }}) – geblokkeerd</span>
+                        <span class="rfid-log-ok">{{ s.item_name }} ✓</span>
                     {% else %}
                         <span class="rfid-log-bad">Niet geregistreerd ✗</span>
                     {% endif %}
                 </div>
                 {% endfor %}
             {% else %}
-                <div class="rfid-empty">Nog geen scans...</div>
+                <div class="rfid-empty">Nog geen admin-scans...</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- CLIENT scan history -->
+    <div class="rfid-section-label">Client scan geschiedenis (inleveringen)</div>
+    <div class="rfid-card">
+        <div class="rfid-log" id="client-log">
+            {% if client_scans %}
+                {% for s in client_scans %}
+                <div class="rfid-log-row">
+                    <span class="rfid-mono">{{ s.timestamp }}</span>
+                    <span class="rfid-mono">{{ s.rfid }}</span>
+                    →
+                    {% if s.result == "OPEN" %}
+                        <span class="rfid-log-ok">{{ s.item_name }} ✓</span>
+                    {% else %}
+                        <span class="rfid-log-bad">Niet geregistreerd ✗</span>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="rfid-empty">Nog geen client-scans...</div>
             {% endif %}
         </div>
     </div>
@@ -102,117 +107,38 @@
 <style>
 .rfid-wrap { max-width: 720px; margin: 0 auto; }
 .rfid-subtitle { color:#888; margin-bottom: 24px; font-size: 14px; }
-
-.rfid-section-label {
-    font-size: 11px; font-weight: 600; letter-spacing: 0.08em;
-    text-transform: uppercase; color: #888;
-    margin: 24px 0 10px;
-}
-
-.rfid-card {
-    background: white;
-    border-radius: 14px;
-    padding: 18px 22px;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.05);
-    border: 1px solid #f0f0f0;
-}
-
-.rfid-ip-form {
-    display: flex; gap: 10px; align-items: center; margin-bottom: 12px;
-}
-.rfid-ip-form input {
-    flex: 1; padding: 10px 14px;
-    border-radius: 10px; border: 1px solid #ddd; font-size: 14px;
-    font-family: 'Poppins', sans-serif;
-}
+.rfid-section-label { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #888; margin: 24px 0 10px; }
+.rfid-card { background: white; border-radius: 14px; padding: 18px 22px; box-shadow: 0 2px 12px rgba(0,0,0,0.05); border: 1px solid #f0f0f0; }
+.rfid-ip-form { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; }
+.rfid-ip-form input { flex: 1; padding: 10px 14px; border-radius: 10px; border: 1px solid #ddd; font-size: 14px; font-family: 'Poppins', sans-serif; }
 .rfid-ip-form input:focus { outline:none; border-color:#6bbf59; }
-
-.rfid-status-bar {
-    display: flex; align-items: center; gap: 10px;
-    font-size: 13px; color: #666; margin-bottom: 24px;
-}
-.rfid-status-dot {
-    width: 10px; height: 10px; border-radius: 50%; background: #ccc;
-}
+.rfid-status-bar { display: flex; align-items: center; gap: 10px; font-size: 13px; color: #666; margin-bottom: 24px; }
+.rfid-status-dot { width: 10px; height: 10px; border-radius: 50%; background: #ccc; }
 .rfid-status-dot.connected { background: #6bbf59; box-shadow: 0 0 0 4px rgba(107,191,89,0.15); }
 .rfid-status-dot.error { background: #e07b3a; }
 .rfid-status-dot.connecting { background: #e4c247; }
-
-.rfid-notification {
-    display: none;
-    border-radius: 12px;
-    padding: 16px 18px;
-    margin-bottom: 16px;
-}
-.rfid-notification.open {
-    display: block;
-    background: #f0fbed; border: 1.5px solid #b6e0a8; color: #2e7d32;
-}
-.rfid-notification.warn {
-    display: block;
-    background: #fffbec; border: 1.5px solid #e0a83a; color: #8a5a0a;
-}
-.rfid-notification.error {
-    display: block;
-    background: #fdecea; border: 1.5px solid #f09595; color: #c62828;
-}
-.rfid-notif-title { font-weight: 600; font-size: 16px; margin-bottom: 4px; }
-
-.rfid-item-row {
-    display: flex; align-items: center; gap: 12px;
-    padding: 12px 0; border-bottom: 1px solid #f0f0f0;
-}
+.rfid-item-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid #f0f0f0; }
 .rfid-item-row:last-child { border-bottom: none; }
-.rfid-cabinet-badge {
-    width: 40px; height: 40px; border-radius: 10px;
-    background: #f0fbed; color: #3a8a2a;
-    display: flex; align-items: center; justify-content: center;
-    font-weight: 600; font-size: 15px; flex-shrink: 0;
-}
+.rfid-cabinet-badge { width: 40px; height: 40px; border-radius: 10px; background: #f0fbed; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
 .rfid-item-info { flex: 1; min-width: 0; }
 .rfid-item-name { font-size: 15px; font-weight: 500; }
 .rfid-item-meta { font-size: 12px; color: #888; margin-top: 2px; }
 .rfid-mono { font-family: 'Courier New', monospace; }
-.rfid-delete-btn {
-    background: white; border: 1px solid #ddd; border-radius: 8px;
-    padding: 6px 12px; font-size: 12px; color: #888; cursor: pointer;
-    font-family: 'Poppins', sans-serif;
-}
-.rfid-delete-btn:hover {
-    border-color: #f09595; color: #c62828; background: #fdecea;
-}
+.rfid-delete-btn { background: white; border: 1px solid #ddd; border-radius: 8px; padding: 6px 12px; font-size: 12px; color: #888; cursor: pointer; font-family: 'Poppins', sans-serif; }
+.rfid-delete-btn:hover { border-color: #f09595; color: #c62828; background: #fdecea; }
 .rfid-empty { color: #aaa; text-align: center; padding: 10px 0; font-size: 14px; }
-
-.rfid-add-form {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr auto;
-    gap: 10px; align-items: end;
-}
+.rfid-add-form { display: grid; grid-template-columns: 1fr 1fr auto; gap: 10px; align-items: end; }
 .rfid-fg { display: flex; flex-direction: column; gap: 4px; }
 .rfid-fg label { font-size: 12px; color: #888; }
-.rfid-fg input, .rfid-fg select {
-    padding: 10px 12px; border-radius: 10px;
-    border: 1px solid #ddd; font-size: 14px;
-    font-family: 'Poppins', sans-serif; background: white;
-}
-.rfid-fg input:focus, .rfid-fg select:focus { outline:none; border-color: #6bbf59; }
+.rfid-fg input { padding: 10px 12px; border-radius: 10px; border: 1px solid #ddd; font-size: 14px; font-family: 'Poppins', sans-serif; background: white; }
+.rfid-fg input:focus { outline:none; border-color: #6bbf59; }
 .rfid-hint { font-size: 12px; color: #aaa; margin-top: 10px; }
-
-.rfid-log {
-    font-size: 13px; max-height: 240px; overflow-y: auto;
-}
-.rfid-log-row {
-    padding: 6px 0; border-bottom: 1px solid #f5f5f5;
-    display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
-}
+.rfid-log { font-size: 13px; max-height: 240px; overflow-y: auto; }
+.rfid-log-row { padding: 6px 0; border-bottom: 1px solid #f5f5f5; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .rfid-log-row:last-child { border-bottom: none; }
 .rfid-log-ok { color: #2e7d32; }
-.rfid-log-warn { color: #8a5a0a; }
 .rfid-log-bad { color: #c62828; }
-
-@media (max-width: 600px) {
-    .rfid-add-form { grid-template-columns: 1fr; }
-}
+@media (max-width: 600px) { .rfid-add-form { grid-template-columns: 1fr; } }
 </style>
 
 <script>
@@ -250,86 +176,41 @@ function startPolling() {
 async function pollPico() {
     if (!picoIP) return;
     try {
-        const res = await fetch("http://" + picoIP + "/last-scan", {
-            signal: AbortSignal.timeout(1500)
-        });
+        const res = await fetch("http://" + picoIP + "/last-scan", { signal: AbortSignal.timeout(1500) });
         const data = await res.json();
         setStatus("connected", "Verbonden — " + picoIP);
         if (data.rfid && data.timestamp !== lastTimestamp) {
             lastTimestamp = data.timestamp;
-            handleScan(data.rfid);
+            // Form'a otomatik doldur (yeni item ekleme kolayligi)
+            document.getElementById("inp-rfid").value = data.rfid;
+            // Admin test okutmasi olarak kaydet, sonra admin log'unu yenile
+            try {
+                await fetch("/rfid/api/test-scan", {
+                    method: "POST",
+                    headers: {"Content-Type": "application/json"},
+                    body: JSON.stringify({rfid: data.rfid})
+                });
+                refreshLog("admin");
+            } catch (e) {}
         }
     } catch (e) {
         setStatus("error", "Pico niet bereikbaar");
     }
 }
 
-async function handleScan(rfid) {
-    // Backend'e scan'i bildir (DB'ye yaz + locker lookup)
-    let data;
+async function refreshLog(source) {
     try {
-        const res = await fetch("/rfid/api/scan", {
-            method: "POST",
-            headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({rfid})
-        });
-        data = await res.json();
-    } catch (e) {
-        return;
-    }
-
-    const notif = document.getElementById("notification");
-    const title = document.getElementById("notif-title");
-    const body = document.getElementById("notif-body");
-    const link = document.getElementById("notif-link");
-
-    notif.className = "rfid-notification";
-    link.style.display = "none";
-
-    if (data.result === "OPEN") {
-        notif.classList.add("open");
-        title.textContent = data.locker_name + " is nu open";
-        body.textContent = "Item: " + data.item_name + ". Lever het in als je klaar bent.";
-        link.href = data.pickup_url;
-        link.style.display = "inline-block";
-    } else if (data.result === "BLOCKED") {
-        notif.classList.add("warn");
-        title.textContent = data.locker_name + " is geblokkeerd";
-        body.textContent = "Item " + data.item_name + " is gemeld als kapot.";
-    } else {
-        notif.classList.add("error");
-        title.textContent = "Onbekende RFID";
-        body.textContent = data.rfid + " is niet geregistreerd. Voeg het toe via het formulier hieronder.";
-        // Form'a otomatik doldur
-        document.getElementById("inp-rfid").value = data.rfid;
-    }
-
-    // Log'u yenile
-    refreshLog();
-
-    setTimeout(() => {
-        notif.className = "rfid-notification";
-    }, 8000);
-}
-
-async function refreshLog() {
-    try {
-        const res = await fetch("/rfid/api/scans");
+        const res = await fetch("/rfid/api/scans?source=" + source);
         const scans = await res.json();
-        const log = document.getElementById("log");
+        const el = document.getElementById(source === "admin" ? "admin-log" : "client-log");
         if (!scans || scans.length === 0) {
-            log.innerHTML = '<div class="rfid-empty">Nog geen scans...</div>';
+            el.innerHTML = '<div class="rfid-empty">Nog geen ' + source + '-scans...</div>';
             return;
         }
-        log.innerHTML = scans.map(s => {
-            let inner;
-            if (s.result === "OPEN") {
-                inner = `<span class="rfid-log-ok">${escapeHtml(s.item_name)} (${escapeHtml(s.locker_name)}) ✓</span>`;
-            } else if (s.result === "BLOCKED") {
-                inner = `<span class="rfid-log-warn">${escapeHtml(s.item_name)} (${escapeHtml(s.locker_name)}) – geblokkeerd</span>`;
-            } else {
-                inner = '<span class="rfid-log-bad">Niet geregistreerd ✗</span>';
-            }
+        el.innerHTML = scans.map(s => {
+            const inner = s.result === "OPEN"
+                ? `<span class="rfid-log-ok">${escapeHtml(s.item_name)} ✓</span>`
+                : '<span class="rfid-log-bad">Niet geregistreerd ✗</span>';
             return `<div class="rfid-log-row">
                 <span class="rfid-mono">${escapeHtml(s.timestamp)}</span>
                 <span class="rfid-mono">${escapeHtml(s.rfid)}</span>
@@ -348,42 +229,33 @@ async function refreshItems() {
             el.innerHTML = '<div class="rfid-empty">Nog geen items geregistreerd</div>';
             return;
         }
-        el.innerHTML = items.map(it => {
-            const num = it.locker_name.split(" ").pop();
-            return `<div class="rfid-item-row">
-                <div class="rfid-cabinet-badge">${escapeHtml(num)}</div>
+        el.innerHTML = items.map(it => `
+            <div class="rfid-item-row">
+                <div class="rfid-cabinet-badge">📦</div>
                 <div class="rfid-item-info">
                     <div class="rfid-item-name">${escapeHtml(it.name)}</div>
-                    <div class="rfid-item-meta">${escapeHtml(it.locker_name)} · <span class="rfid-mono">${escapeHtml(it.rfid)}</span></div>
+                    <div class="rfid-item-meta"><span class="rfid-mono">${escapeHtml(it.rfid)}</span></div>
                 </div>
                 <button class="rfid-delete-btn" onclick="deleteItem(${it.id})">Verwijder</button>
-            </div>`;
-        }).join("");
+            </div>`).join("");
     } catch (e) {}
 }
 
 async function addItem() {
     const name = document.getElementById("inp-name").value.trim();
     const rfid = document.getElementById("inp-rfid").value.trim().toUpperCase();
-    const locker = document.getElementById("inp-locker").value;
-
-    if (!name || !rfid || !locker) {
-        alert("Naam, RFID en locker zijn verplicht.");
-        return;
-    }
+    if (!name || !rfid) { alert("Naam en RFID zijn verplicht."); return; }
 
     const res = await fetch("/rfid/api/items", {
         method: "POST",
         headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({name, rfid, locker_name: locker})
+        body: JSON.stringify({name, rfid})
     });
-
     if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         alert("Fout: " + (err.error || res.status));
         return;
     }
-
     document.getElementById("inp-name").value = "";
     document.getElementById("inp-rfid").value = "";
     refreshItems();
@@ -397,18 +269,10 @@ async function deleteItem(id) {
 
 function escapeHtml(s) {
     if (s == null) return "";
-    return String(s)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#39;");
+    return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
 }
 
-// Sayfa acildiginda IP varsa polling baslat
-if (picoIP) {
-    startPolling();
-}
+if (picoIP) { startPolling(); }
 </script>
 
 {% endblock %}
