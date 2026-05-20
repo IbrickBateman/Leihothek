@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="return-container">
+
+    <h2>Item inleveren — stap 1 van 3</h2>
+    <p style="color:#888; margin-top:8px; margin-bottom:24px;">
+        Houd het RFID-kaartje van het item tegen de lezer. De juiste locker gaat automatisch open.
+    </p>
+
+    <!-- Bağlantı durumu -->
+    <div class="rfid-status-bar" style="margin-bottom:20px;">
+        <div class="rfid-status-dot" id="status-dot"></div>
+        <span id="status-text">Niet verbonden</span>
+    </div>
+
+    <!-- Tarama bekleme kutusu -->
+    <div class="scan-wait-card" id="wait-card">
+        <div class="scan-pulse"></div>
+        <p class="scan-wait-text">Wachten op kaart...</p>
+    </div>
+
+    <!-- Bilinmeyen kart uyarısı -->
+    <div class="rfid-notification" id="notification">
+        <div class="rfid-notif-title" id="notif-title"></div>
+        <div id="notif-body"></div>
+    </div>
+
+    <a href="/rentals" style="display:block; text-align:center; margin-top:24px; color:#aaa; font-size:13px;">
+        Terug naar overzicht
+    </a>
+
+</div>
+
+<style>
+.return-container { max-width: 520px; margin: 0 auto; }
+
+.rfid-status-bar { display: flex; align-items: center; gap: 10px; font-size: 13px; color: #666; }
+.rfid-status-dot { width: 10px; height: 10px; border-radius: 50%; background: #ccc; }
+.rfid-status-dot.connected { background: #6bbf59; box-shadow: 0 0 0 4px rgba(107,191,89,0.15); }
+.rfid-status-dot.error { background: #e07b3a; }
+.rfid-status-dot.connecting { background: #e4c247; }
+
+.scan-wait-card {
+    background: white; border-radius: 16px; padding: 50px 30px;
+    text-align: center; box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+}
+.scan-pulse {
+    width: 70px; height: 70px; border-radius: 50%;
+    background: #6bbf59; margin: 0 auto 20px;
+    animation: pulse 1.6s ease-in-out infinite;
+}
+@keyframes pulse {
+    0%   { transform: scale(0.85); box-shadow: 0 0 0 0 rgba(107,191,89,0.5); }
+    70%  { transform: scale(1);    box-shadow: 0 0 0 22px rgba(107,191,89,0); }
+    100% { transform: scale(0.85); box-shadow: 0 0 0 0 rgba(107,191,89,0); }
+}
+.scan-wait-text { color: #666; font-size: 15px; }
+
+.rfid-notification { display: none; border-radius: 12px; padding: 16px 18px; margin-top: 16px; }
+.rfid-notification.error { display: block; background: #fdecea; border: 1.5px solid #f09595; color: #c62828; }
+.rfid-notification.ok { display: block; background: #f0fbed; border: 1.5px solid #b6e0a8; color: #2e7d32; }
+.rfid-notif-title { font-weight: 600; font-size: 16px; margin-bottom: 4px; }
+</style>
+
+<script>
+let picoIP = {{ pico_ip|tojson }};
+let polling = null;
+let lastTimestamp = 0;
+let handled = false;
+
+function setStatus(state, text) {
+    const dot = document.getElementById("status-dot");
+    dot.className = "rfid-status-dot";
+    if (state) dot.classList.add(state);
+    document.getElementById("status-text").textContent = text;
+}
+
+function startPolling() {
+    if (polling) clearInterval(polling);
+    setStatus("connecting", "Verbinden...");
+    polling = setInterval(pollPico, 800);
+}
+
+async function pollPico() {
+    if (!picoIP || handled) return;
+    try {
+        const res = await fetch("http://" + picoIP + "/last-scan", { signal: AbortSignal.timeout(1500) });
+        const data = await res.json();
+        setStatus("connected", "Verbonden — " + picoIP);
+        if (data.rfid && data.timestamp !== lastTimestamp) {
+            lastTimestamp = data.timestamp;
+            handleScan(data.rfid);
+        }
+    } catch (e) {
+        setStatus("error", "Pico niet bereikbaar");
+    }
+}
+
+async function handleScan(rfid) {
+    if (handled) return;
+    let data;
+    try {
+        const res = await fetch("/return-rfid/api/scan", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({rfid})
+        });
+        data = await res.json();
+    } catch (e) { return; }
+
+    const notif = document.getElementById("notification");
+    const title = document.getElementById("notif-title");
+    const body = document.getElementById("notif-body");
+
+    if (data.result === "OPEN") {
+        handled = true;
+        if (polling) clearInterval(polling);
+        notif.className = "rfid-notification ok";
+        title.textContent = data.item_name + " — locker is geopend";
+        body.textContent = "Doorsturen naar camera-controle...";
+        // ADIM 2'ye gec
+        setTimeout(() => { window.location.href = data.next_url; }, 1200);
+    } else {
+        notif.className = "rfid-notification error";
+        title.textContent = "Onbekende RFID";
+        body.textContent = data.rfid + " is niet geregistreerd. Vraag een admin om dit item toe te voegen.";
+        setTimeout(() => { notif.className = "rfid-notification"; }, 6000);
+    }
+}
+
+if (picoIP) {
+    startPolling();
+} else {
+    setStatus("error", "Geen Pico IP ingesteld (admin moet dit instellen op /rfid)");
+}
+</script>
+
+{% endblock %}
