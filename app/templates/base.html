@@ -42,7 +42,9 @@
 
         <a href="{{ url_for('main.scan_page') }}" class="btn">Scan</a>
 
-        <a href="{{ url_for('main.rfid_page') }}" class="btn">RFID</a>
+    {% if session.is_admin %}
+        <a href="{{ url_for('main.rfid_page') }}" class="btn">RFID beheer</a>
+    {% endif %}
 
 </div>
 
