@@ -51,6 +51,16 @@ def gen_frames():
 def video_feed():
     return Response(gen_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
+
+# ------------------ HELPERS ------------------
+
+def current_user():
+    return session.get("username")
+
+def is_current_admin():
+    return db.is_admin(session.get("username"))
+
+
 # ------------------ AUTH ------------------
 
 @main.route("/register", methods=["GET", "POST"])
@@ -88,6 +98,7 @@ def login():
         if user and bcrypt.checkpw(password.encode(), user[0]):
             session["logged_in"] = True
             session["username"] = username
+            session["is_admin"] = db.is_admin(username)
             return redirect(url_for("main.home"))
         else:
             return render_template("login.html", error="Verkeerde login")
@@ -105,7 +116,9 @@ def logout():
 def home():
     if not session.get("logged_in"):
         return redirect(url_for("main.login"))
-    return render_template("home.html", username=session.get("username"))
+    return render_template("home.html",
+                           username=session.get("username"),
+                           is_admin=is_current_admin())
 
 # ------------------ SCAN ------------------
 
@@ -250,9 +263,10 @@ def rentals():
                            rented=rented,
                            blocked=blocked,
                            alerts=admin_alerts,
-                           backup_locker=BACKUP_LOCKER)
+                           backup_locker=BACKUP_LOCKER,
+                           is_admin=is_current_admin())
 
-# ------------------ PICKUP ------------------
+# ------------------ PICKUP (alis - DEGISMEDI) ------------------
 
 @main.route("/pickup/<name>")
 def pickup(name):
@@ -297,13 +311,104 @@ def pickup_broken(name):
                            broken_locker=name,
                            backup_locker=BACKUP_LOCKER)
 
-# ------------------ RETURN ------------------
 
-@main.route("/return/<name>", methods=["GET"])
+# ============================================================
+# IADE (RETURN) AKISI — RFID ILE
+# Sira: 1) RFID okut -> 2) dolap acildi + kamera -> 3) durum formu
+# ============================================================
+
+# --- ADIM 1: RFID okutma ekrani ---
+@main.route("/return-rfid")
+def return_rfid():
+    if not session.get("logged_in"):
+        return redirect(url_for("main.login"))
+    pico_ip = db.get_setting("pico_ip", "")
+    return render_template("return_rfid.html", pico_ip=pico_ip)
+
+
+# --- ADIM 1 API: kart okununca esyayi bul ---
+@main.route("/return-rfid/api/scan", methods=["POST"])
+def return_rfid_scan():
+    if not session.get("logged_in"):
+        return jsonify({"error": "unauthorized"}), 401
+
+    data = request.get_json(silent=True) or {}
+    rfid = (data.get("rfid") or "").strip().upper()
+    if not rfid:
+        return jsonify({"error": "rfid required"}), 400
+
+    item = db.find_item_by_rfid(rfid)
+    timestamp = datetime.now().strftime("%d/%m %H:%M:%S")
+
+    if item:
+        db.add_scan(rfid, item["name"], "OPEN", timestamp, source="client")
+        return jsonify({
+            "result": "OPEN",
+            "rfid": rfid,
+            "item_name": item["name"],
+            # ADIM 2'ye yonlendir: dolap acildi + kamera
+            "next_url": url_for("main.return_camera", name=item["name"]),
+            "timestamp": timestamp,
+        })
+    else:
+        db.add_scan(rfid, None, "UNKNOWN", timestamp, source="client")
+        return jsonify({
+            "result": "UNKNOWN",
+            "rfid": rfid,
+            "timestamp": timestamp,
+        })
+
+
+# --- ADIM 2: dolap acildi + kamera (YOLO scan) ---
+@main.route("/return-camera/<name>")
+def return_camera(name):
+    if not session.get("logged_in"):
+        return redirect(url_for("main.login"))
+    return render_template("return_camera.html", item_name=name)
+
+
+# --- ADIM 2 ACTION: kamera ile scan calistir, sonra ADIM 3'e gec ---
+@main.route("/return-camera/<name>/scan", methods=["POST"])
+def return_camera_scan(name):
+    if not session.get("logged_in"):
+        return redirect(url_for("main.login"))
+
+    cap = get_working_camera()
+    detections = []
+    status = "FOUT"
+
+    if cap is not None:
+        frames = []
+        for _ in range(5):
+            ret, frame = cap.read()
+            if ret:
+                frames.append(frame)
+        cap.release()
+
+        all_detections = []
+        for frame in frames:
+            all_detections.extend(detect_frame(frame))
+        detections = list(set(all_detections))
+        status = get_locker_status(detections)
+
+    # Kamera sonucunu ADIM 3 (durum formu) sayfasina tasi
+    return render_template("return_camera.html",
+                           item_name=name,
+                           scan_done=True,
+                           scan_status=status,
+                           detections=detections)
+
+
+# --- ADIM 3: urun durumu formu (fotograf + yorum) ---
+@main.route("/return-form/<name>", methods=["GET"])
 def return_form(name):
+    if not session.get("logged_in"):
+        return redirect(url_for("main.login"))
     return render_template("return_form.html", locker_name=name)
 
-@main.route("/return/<name>", methods=["POST"])
+
+# --- ADIM 3 SUBMIT: durum kaydet, bitir ---
+@main.route("/return-form/<name>", methods=["POST"])
 def return_locker(name):
     status = request.form.get("status", "OK")
     comment = request.form.get("comment", "")
@@ -317,7 +422,8 @@ def return_locker(name):
     photo_data = request.form.get("photo_data", "")
     if photo_data.startswith("data:image"):
         header, encoded = photo_data.split(",", 1)
-        photo_filename = f"{name}_{datetime.now().strftime('%H%M%S')}.jpg"
+        safe_name = name.replace(" ", "_")
+        photo_filename = f"{safe_name}_{datetime.now().strftime('%H%M%S')}.jpg"
         with open(os.path.join(upload_folder, photo_filename), "wb") as f:
             f.write(base64.b64decode(encoded))
 
@@ -331,6 +437,7 @@ def return_locker(name):
 
     condition_reports.setdefault(name, []).append(report)
 
+    # Eger bu isimde bir locker varsa durumunu guncelle (eski Locker 1-4 uyumu)
     for locker in lockers_data:
         if locker["name"] == name:
             locker["user"] = None
@@ -341,35 +448,41 @@ def return_locker(name):
 
 
 # ============================================================
-# RFID CABINET MANAGEMENT
+# RFID ADMIN PANELI (sadece admin) — obje ekleme/silme
 # ============================================================
 
 @main.route("/rfid")
 def rfid_page():
     if not session.get("logged_in"):
         return redirect(url_for("main.login"))
+    if not is_current_admin():
+        # normal uye buraya giremez
+        return redirect(url_for("main.home"))
 
     items = db.get_all_rfid_items()
-    scans = db.get_recent_scans(limit=30)
+    admin_scans = db.get_recent_scans(limit=30, source="admin")
+    client_scans = db.get_recent_scans(limit=30, source="client")
     pico_ip = db.get_setting("pico_ip", "")
-    locker_names = [l["name"] for l in lockers_data]
 
     return render_template(
         "rfid.html",
         items=items,
-        scans=scans,
+        admin_scans=admin_scans,
+        client_scans=client_scans,
         pico_ip=pico_ip,
-        locker_names=locker_names,
+        is_admin=True,
     )
 
 
-# ----- API: pico IP opslaan -----
+# ----- API: pico IP opslaan (admin) -----
 @main.route("/rfid/api/pico-ip", methods=["GET", "POST"])
 def rfid_pico_ip():
     if not session.get("logged_in"):
         return jsonify({"error": "unauthorized"}), 401
 
     if request.method == "POST":
+        if not is_current_admin():
+            return jsonify({"error": "forbidden"}), 403
         data = request.get_json(silent=True) or {}
         ip = (data.get("ip") or "").strip()
         if not ip:
@@ -380,29 +493,29 @@ def rfid_pico_ip():
     return jsonify({"ip": db.get_setting("pico_ip", "")})
 
 
-# ----- API: items CRUD -----
+# ----- API: items CRUD (ekleme/silme sadece admin) -----
 @main.route("/rfid/api/items", methods=["GET", "POST"])
 def rfid_items():
     if not session.get("logged_in"):
         return jsonify({"error": "unauthorized"}), 401
 
     if request.method == "POST":
+        if not is_current_admin():
+            return jsonify({"error": "forbidden"}), 403
+
         data = request.get_json(silent=True) or {}
         name = (data.get("name") or "").strip()
         rfid = (data.get("rfid") or "").strip().upper()
-        locker_name = (data.get("locker_name") or "").strip()
 
-        if not name or not rfid or not locker_name:
-            return jsonify({"error": "name, rfid and locker_name required"}), 400
-
-        valid_lockers = [l["name"] for l in lockers_data]
-        if locker_name not in valid_lockers:
-            return jsonify({"error": "invalid locker_name"}), 400
+        if not name or not rfid:
+            return jsonify({"error": "name and rfid required"}), 400
 
         if db.find_item_by_rfid(rfid):
             return jsonify({"error": "rfid already used"}), 409
+        if db.find_item_by_name(name):
+            return jsonify({"error": "name already used"}), 409
 
-        item = db.add_rfid_item(name, rfid, locker_name)
+        item = db.add_rfid_item(name, rfid)
         if item is None:
             return jsonify({"error": "could not add item"}), 500
         return jsonify(item)
@@ -414,15 +527,19 @@ def rfid_items():
 def rfid_delete_item(item_id):
     if not session.get("logged_in"):
         return jsonify({"error": "unauthorized"}), 401
+    if not is_current_admin():
+        return jsonify({"error": "forbidden"}), 403
     db.delete_rfid_item(item_id)
     return jsonify({"ok": True})
 
 
-# ----- API: scan kayit ekleme (browser, Pico'dan kart okuyunca buraya yazar) -----
-@main.route("/rfid/api/scan", methods=["POST"])
-def rfid_scan():
+# ----- API: admin panelde test okutma (source='admin') -----
+@main.route("/rfid/api/test-scan", methods=["POST"])
+def rfid_test_scan():
     if not session.get("logged_in"):
         return jsonify({"error": "unauthorized"}), 401
+    if not is_current_admin():
+        return jsonify({"error": "forbidden"}), 403
 
     data = request.get_json(silent=True) or {}
     rfid = (data.get("rfid") or "").strip().upper()
@@ -433,24 +550,15 @@ def rfid_scan():
     timestamp = datetime.now().strftime("%d/%m %H:%M:%S")
 
     if item:
-        # Locker'in durumunu kontrol et
-        locker_obj = next((l for l in lockers_data if l["name"] == item["locker_name"]), None)
-        blocked = bool(locker_obj and locker_obj["blocked"])
-
-        result = "BLOCKED" if blocked else "OPEN"
-        db.add_scan(rfid, item["name"], item["locker_name"], result, timestamp)
-
+        db.add_scan(rfid, item["name"], "OPEN", timestamp, source="admin")
         return jsonify({
-            "result": result,
+            "result": "OPEN",
             "rfid": rfid,
             "item_name": item["name"],
-            "locker_name": item["locker_name"],
-            "pickup_url": url_for("main.pickup", name=item["locker_name"]),
             "timestamp": timestamp,
-            "blocked": blocked,
         })
     else:
-        db.add_scan(rfid, None, None, "UNKNOWN", timestamp)
+        db.add_scan(rfid, None, "UNKNOWN", timestamp, source="admin")
         return jsonify({
             "result": "UNKNOWN",
             "rfid": rfid,
@@ -458,10 +566,11 @@ def rfid_scan():
         })
 
 
-# ----- API: son taramalari getir (refresh icin) -----
+# ----- API: son taramalari getir (source: admin / client) -----
 @main.route("/rfid/api/scans", methods=["GET"])
 def rfid_scans_list():
     if not session.get("logged_in"):
         return jsonify({"error": "unauthorized"}), 401
-    return jsonify(db.get_recent_scans(limit=30))
+    source = request.args.get("source")  # 'admin', 'client' veya None (hepsi)
+    return jsonify(db.get_recent_scans(limit=30, source=source))
 
