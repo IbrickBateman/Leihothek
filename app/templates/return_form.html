@@ -4,10 +4,10 @@
 
 <div class="return-container">
 
-    <h2>Return {{ locker_name }}</h2>
-    <p style="color: #888; margin-top: 8px; margin-bottom: 30px;">How was the condition of the item when you return it?</p>
+    <h2>{{ locker_name }} — stap 3 van 3</h2>
+    <p style="color: #888; margin-top: 8px; margin-bottom: 30px;">Hoe was de conditie van het item bij het inleveren?</p>
 
-    <form action="/return/{{ locker_name }}" method="POST" enctype="multipart/form-data" class="return-form" id="returnForm">
+    <form action="/return-form/{{ locker_name }}" method="POST" enctype="multipart/form-data" class="return-form" id="returnForm">
 
         <!-- Status -->
         <div class="form-section">
