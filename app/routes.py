@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, session, Response
+from flask import Blueprint, render_template, request, redirect, url_for, session, Response, jsonify
 import os
 import sqlite3
 import bcrypt
@@ -8,6 +8,7 @@ import base64
 
 from .services.detection import detect_frame, detect_image
 from .services.locker import get_locker_status
+from . import database as db
 
 main = Blueprint("main", __name__)
 
@@ -337,3 +338,130 @@ def return_locker(name):
             locker["status"] = "available"
 
     return redirect(url_for("main.rentals"))
+
+
+# ============================================================
+# RFID CABINET MANAGEMENT
+# ============================================================
+
+@main.route("/rfid")
+def rfid_page():
+    if not session.get("logged_in"):
+        return redirect(url_for("main.login"))
+
+    items = db.get_all_rfid_items()
+    scans = db.get_recent_scans(limit=30)
+    pico_ip = db.get_setting("pico_ip", "")
+    locker_names = [l["name"] for l in lockers_data]
+
+    return render_template(
+        "rfid.html",
+        items=items,
+        scans=scans,
+        pico_ip=pico_ip,
+        locker_names=locker_names,
+    )
+
+
+# ----- API: pico IP opslaan -----
+@main.route("/rfid/api/pico-ip", methods=["GET", "POST"])
+def rfid_pico_ip():
+    if not session.get("logged_in"):
+        return jsonify({"error": "unauthorized"}), 401
+
+    if request.method == "POST":
+        data = request.get_json(silent=True) or {}
+        ip = (data.get("ip") or "").strip()
+        if not ip:
+            return jsonify({"error": "ip required"}), 400
+        db.set_setting("pico_ip", ip)
+        return jsonify({"ok": True, "ip": ip})
+
+    return jsonify({"ip": db.get_setting("pico_ip", "")})
+
+
+# ----- API: items CRUD -----
+@main.route("/rfid/api/items", methods=["GET", "POST"])
+def rfid_items():
+    if not session.get("logged_in"):
+        return jsonify({"error": "unauthorized"}), 401
+
+    if request.method == "POST":
+        data = request.get_json(silent=True) or {}
+        name = (data.get("name") or "").strip()
+        rfid = (data.get("rfid") or "").strip().upper()
+        locker_name = (data.get("locker_name") or "").strip()
+
+        if not name or not rfid or not locker_name:
+            return jsonify({"error": "name, rfid and locker_name required"}), 400
+
+        valid_lockers = [l["name"] for l in lockers_data]
+        if locker_name not in valid_lockers:
+            return jsonify({"error": "invalid locker_name"}), 400
+
+        if db.find_item_by_rfid(rfid):
+            return jsonify({"error": "rfid already used"}), 409
+
+        item = db.add_rfid_item(name, rfid, locker_name)
+        if item is None:
+            return jsonify({"error": "could not add item"}), 500
+        return jsonify(item)
+
+    return jsonify(db.get_all_rfid_items())
+
+
+@main.route("/rfid/api/items/<int:item_id>", methods=["DELETE"])
+def rfid_delete_item(item_id):
+    if not session.get("logged_in"):
+        return jsonify({"error": "unauthorized"}), 401
+    db.delete_rfid_item(item_id)
+    return jsonify({"ok": True})
+
+
+# ----- API: scan kayit ekleme (browser, Pico'dan kart okuyunca buraya yazar) -----
+@main.route("/rfid/api/scan", methods=["POST"])
+def rfid_scan():
+    if not session.get("logged_in"):
+        return jsonify({"error": "unauthorized"}), 401
+
+    data = request.get_json(silent=True) or {}
+    rfid = (data.get("rfid") or "").strip().upper()
+    if not rfid:
+        return jsonify({"error": "rfid required"}), 400
+
+    item = db.find_item_by_rfid(rfid)
+    timestamp = datetime.now().strftime("%d/%m %H:%M:%S")
+
+    if item:
+        # Locker'in durumunu kontrol et
+        locker_obj = next((l for l in lockers_data if l["name"] == item["locker_name"]), None)
+        blocked = bool(locker_obj and locker_obj["blocked"])
+
+        result = "BLOCKED" if blocked else "OPEN"
+        db.add_scan(rfid, item["name"], item["locker_name"], result, timestamp)
+
+        return jsonify({
+            "result": result,
+            "rfid": rfid,
+            "item_name": item["name"],
+            "locker_name": item["locker_name"],
+            "pickup_url": url_for("main.pickup", name=item["locker_name"]),
+            "timestamp": timestamp,
+            "blocked": blocked,
+        })
+    else:
+        db.add_scan(rfid, None, None, "UNKNOWN", timestamp)
+        return jsonify({
+            "result": "UNKNOWN",
+            "rfid": rfid,
+            "timestamp": timestamp,
+        })
+
+
+# ----- API: son taramalari getir (refresh icin) -----
+@main.route("/rfid/api/scans", methods=["GET"])
+def rfid_scans_list():
+    if not session.get("logged_in"):
+        return jsonify({"error": "unauthorized"}), 401
+    return jsonify(db.get_recent_scans(limit=30))
+
