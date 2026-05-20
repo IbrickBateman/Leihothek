@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="return-container">
+
+    <h2>{{ item_name }} — stap 2 van 3</h2>
+
+    {% if not scan_done %}
+    <!-- Dolap acildi, kamera kontrolu bekleniyor -->
+    <div class="open-banner">
+        <span class="open-icon">🔓</span>
+        <div>
+            <strong>Locker is geopend</strong>
+            <p>Plaats het item terug en voer de camera-controle uit.</p>
+        </div>
+    </div>
+
+    <div class="scan-card" style="margin-top:20px;">
+        <p>De camera controleert of het item correct is teruggeplaatst.</p>
+        <div class="scan-image">
+            <img src="{{ url_for('main.video_feed') }}" alt="camera">
+        </div>
+        <form method="POST" action="{{ url_for('main.return_camera_scan', name=item_name) }}">
+            <button class="btn">Camera-controle uitvoeren</button>
+        </form>
+    </div>
+
+    {% else %}
+    <!-- Kamera sonucu geldi -->
+    <div class="scan-card" style="margin-top:20px;">
+        <h3>Camera-resultaat</h3>
+        <p style="margin:10px 0;">
+            Status:
+            <span class="{{ 'ok' if scan_status == 'OK' else 'fout' }}">{{ scan_status }}</span>
+        </p>
+
+        {% if detections %}
+        <p>Gedetecteerd:</p>
+        <ul style="margin:8px 0; padding-left:20px;">
+            {% for d in detections %}<li>{{ d }}</li>{% endfor %}
+        </ul>
+        {% else %}
+        <p style="color:#888;">Geen objecten gedetecteerd.</p>
+        {% endif %}
+
+        <a href="{{ url_for('main.return_form', name=item_name) }}"
+           class="btn" style="margin-top:16px; display:inline-block;">
+            Volgende: conditie beoordelen →
+        </a>
+    </div>
+    {% endif %}
+
+    <a href="/rentals" style="display:block; text-align:center; margin-top:24px; color:#aaa; font-size:13px;">
+        Annuleren
+    </a>
+
+</div>
+
+<style>
+.return-container { max-width: 560px; margin: 0 auto; }
+
+.open-banner {
+    display: flex; align-items: center; gap: 16px;
+    background: #f0fbed; border: 1.5px solid #b6e0a8;
+    border-radius: 14px; padding: 18px 20px; color: #2e7d32;
+}
+.open-banner p { margin: 4px 0 0; font-size: 14px; color: #3a7a2a; }
+.open-icon { font-size: 30px; }
+
+.scan-card {
+    background: white; padding: 30px; border-radius: 16px;
+    text-align: center; box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+}
+.scan-image img { width: 100%; max-width: 460px; border-radius: 12px; margin: 18px 0; }
+
+.ok { background:#e6f4ea; color:#2e7d32; padding:6px 12px; border-radius:999px; font-size:14px; }
+.fout { background:#fdecea; color:#c62828; padding:6px 12px; border-radius:999px; font-size:14px; }
+</style>
+
+{% endblock %}
