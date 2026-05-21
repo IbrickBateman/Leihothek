@@ -307,6 +307,13 @@ def pickup_broken(name):
 
     condition_reports.setdefault(name, []).append(report)
 
+    admin_alerts.append({
+        "locker": name,
+        "user": user,
+        "timestamp": datetime.now().strftime("%d/%m %H:%M"),
+        "message": f"{name} geblokkeerd - item kapot gemeld door {user}"
+    })
+
     return render_template("backup_locker.html",
                            broken_locker=name,
                            backup_locker=BACKUP_LOCKER)
@@ -411,8 +418,12 @@ def return_form(name):
 @main.route("/return-form/<name>", methods=["POST"])
 def return_locker(name):
     status = request.form.get("status", "OK")
+    problem_type = request.form.get("problem_type", "")
     comment = request.form.get("comment", "")
     user = session.get("username")
+
+    if status == "DEFECT":
+        status = "BROKEN" if problem_type == "BROKEN" else "MINOR"
 
     photo_filename = None
     BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -442,7 +453,17 @@ def return_locker(name):
         if locker["name"] == name:
             locker["user"] = None
             locker["rented_at"] = None
-            locker["status"] = "available"
+            if status == "BROKEN":
+                locker["blocked"] = True
+                locker["status"] = "available"
+                admin_alerts.append({
+                    "locker": name,
+                    "user": user,
+                    "timestamp": datetime.now().strftime("%d/%m %H:%M"),
+                    "message": f"{name} geblokkeerd - item kapot ingeleverd door {user}"
+                })
+            else:
+                locker["status"] = "available"
 
     return redirect(url_for("main.rentals"))
 
@@ -574,3 +595,17 @@ def rfid_scans_list():
     source = request.args.get("source")  # 'admin', 'client' veya None (hepsi)
     return jsonify(db.get_recent_scans(limit=30, source=source))
 
+# ------------------ UNBLOCK ------------------
+
+@main.route("/unblock/<name>")
+def unblock_locker(name):
+    if not session.get("logged_in"):
+        return redirect(url_for("main.login"))
+    for locker in lockers_data:
+        if locker["name"] == name:
+            locker["blocked"] = False
+    global admin_alerts
+    admin_alerts = [a for a in admin_alerts if a["locker"] != name]
+    if name in condition_reports:
+        condition_reports[name] = []
+    return redirect(url_for("main.rentals"))

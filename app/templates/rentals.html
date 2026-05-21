@@ -5,16 +5,68 @@
 <!-- 🔔 ADMIN ALERTS -->
 {% if alerts %}
 <div class="alerts-section">
-    <h3>⚠️ Meldingen</h3>
+    <div class="alerts-header">
+        <span class="alerts-dot"></span>
+        <h3>Notifications</h3>
+    </div>
     {% for alert in alerts %}
     <div class="alert-item">
-        <span>{{ alert.message }}</span>
-        <span class="alert-time">{{ alert.timestamp }}</span>
-        <a href="/unblock/{{ alert.locker }}" class="btn btn-unblock">Hersteld</a>
+        <div class="alert-text">
+            <span class="alert-message">{{ alert.message }}</span>
+            <span class="alert-time">{{ alert.timestamp }}</span>
+        </div>
+        <a href="/unblock/{{ alert.locker }}" class="btn btn-unblock">Mark as repaired</a>
     </div>
     {% endfor %}
 </div>
 {% endif %}
+
+<style>
+.alerts-section {
+    background: white;
+    border-left: 4px solid #e07b3a;
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin-bottom: 28px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.05);
+}
+.alerts-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+.alerts-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #e07b3a;
+    flex-shrink: 0;
+}
+.alerts-header h3 {
+    font-size: 15px;
+    font-weight: 600;
+    color: #e07b3a;
+    margin: 0;
+}
+.alert-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 12px 0;
+    border-top: 1px solid #f5f5f5;
+}
+.alert-text {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.alert-message { font-size: 14px; color: #333; font-weight: 500; }
+.alert-time { font-size: 12px; color: #aaa; }
+.btn-unblock { background: #6bbf59; font-size: 13px; padding: 8px 16px; white-space: nowrap; flex-shrink: 0; }
+.btn-unblock:hover { background: #5aa94b; }
+</style>
 
 <!-- 📊 STATS -->
 <div class="stats">
