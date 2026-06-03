@@ -9,6 +9,7 @@ import base64
 from .services.detection import detect_frame, detect_image
 from .services.locker import get_locker_status
 from . import database as db
+from .services.shelly import get_shelly_status
 
 main = Blueprint("main", __name__)
 
@@ -239,6 +240,17 @@ def locker_detail(name):
         "image": filename,
         "detections": detections
     })
+
+@main.route("/device-check")
+def device_check():
+    data = get_shelly_status()
+
+    return render_template(
+        "device_check.html",
+        power=round(data["power"], 2),
+        status=data["status"],
+        color=data["color"]
+    )
 
 # ------------------ RENTALS ------------------
 

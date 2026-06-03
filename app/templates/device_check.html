@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<style>
+.status {
+    color: {{ color }};
+}
+</style>
+
+<div style="text-align:center; margin-top:50px;">
+    <h1>Device Check</h1>
+
+    <p>{{ power }} W</p>
+
+    <h2 class="status">
+        {{ status }}
+    </h2>
+
+    <button onclick="location.reload()">
+        Test again
+    </button>
+</div>
+
+{% endblock %}

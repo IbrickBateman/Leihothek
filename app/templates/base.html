@@ -34,6 +34,8 @@
         <a href="{{ url_for('main.home') }}" class="btn">Home</a>
     {% endif %}
 
+    <a href="{{ url_for('main.device_check') }}" class="btn">Device Check</a>
+
     {% if request.path != "/check" %}
         <a href="{{ url_for('main.check') }}" class="btn">Check lockers</a>
     {% endif %}
